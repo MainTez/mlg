@@ -41,7 +41,8 @@ const SECTION_KEYS = new Set([
   "history",
   "tournaments",
   "news",
-  "settings"
+  "settings",
+  "download"
 ]);
 
 const TIER_ORDER = {
@@ -1506,6 +1507,13 @@ export default function HomePage() {
           >
             Settings
           </button>
+          <button
+            type="button"
+            className={activeSection === "download" ? "nav-item active" : "nav-item"}
+            onClick={() => setActiveSection("download")}
+          >
+            Download app
+          </button>
           <a className="nav-item" href="/admin">
             Admin
           </a>
@@ -2023,6 +2031,33 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+            </section>
+          ) : null}
+
+          {activeSection === "download" ? (
+            <section className="card card-strong fade-in">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Download</p>
+                  <h2>Get the desktop app</h2>
+                </div>
+              </div>
+              <p className="match-meta">
+                Install the latest Windows build from GitHub Releases. Updates
+                will download automatically when you reopen the app.
+              </p>
+              <a
+                className="download-button"
+                href="https://github.com/MainTez/mlg/releases/latest"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Download installer
+              </a>
+              <p className="match-meta">
+                If Windows warns about the installer, click "More info" → "Run
+                anyway".
+              </p>
             </section>
           ) : null}
 
