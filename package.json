@@ -2,11 +2,14 @@
   "name": "lol-tracker",
   "version": "0.1.2",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron": "electron .",
+    "electron:pack": "electron-builder --win --x64"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.45.4",
@@ -15,5 +18,22 @@
     "redis": "4.6.13",
     "react": "18.3.1",
     "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "electron": "33.2.0",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.maintez.mlg",
+    "productName": "Molgarian Team Hub",
+    "files": [
+      "electron/**",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
   }
 }

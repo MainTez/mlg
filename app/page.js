@@ -164,6 +164,28 @@ const formatDateLabel = (value) => {
   });
 };
 
+const formatCountdown = (targetMs, nowMs) => {
+  if (!targetMs || !Number.isFinite(targetMs)) {
+    return "";
+  }
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  const diffMs = targetMs - now;
+  if (diffMs <= 0) {
+    return "";
+  }
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) {
+    return `${days}d ${hours}h ${minutes}m`;
+  }
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+};
+
 const mergeAnnouncements = (prev, next) => {
   const merged = [];
   const seen = new Set();
@@ -1839,6 +1861,24 @@ export default function HomePage() {
                             ? entry.starts_at.split("T")[0]
                             : "TBD"}
                         </div>
+                        {entry.starts_at ? (() => {
+                          const countdown = formatCountdown(
+                            new Date(entry.starts_at).getTime(),
+                            statusNow
+                          );
+                          return countdown ? (
+                            <div className="match-meta">
+                              Starts in {countdown}
+                            </div>
+                          ) : null;
+                        })() : null}
+                        {entry.link ? (
+                          <div className="match-meta">
+                            <a href={entry.link} target="_blank" rel="noreferrer">
+                              {entry.link}
+                            </a>
+                          </div>
+                        ) : null}
                         {entry.location ? (
                           <div className="match-meta">{entry.location}</div>
                         ) : null}

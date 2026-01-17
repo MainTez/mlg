@@ -62,6 +62,7 @@ create table if not exists tournaments (
   name text not null,
   status text not null,
   starts_at timestamptz,
+  link text,
   location text,
   notes text,
   created_at timestamptz default now()

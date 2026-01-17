@@ -37,7 +37,7 @@ export async function POST(request) {
     }
     const supabase = getSupabaseAdmin();
     const body = await request.json();
-    const { name, status, starts_at, location, notes } = body || {};
+    const { name, status, starts_at, link, location, notes } = body || {};
 
     if (!name || !status) {
       return NextResponse.json(
@@ -55,6 +55,7 @@ export async function POST(request) {
           name,
           status,
           starts_at: startsAtValue,
+          link: link || "",
           location: location || "",
           notes: notes || ""
         }
@@ -83,7 +84,7 @@ export async function PATCH(request) {
     }
     const supabase = getSupabaseAdmin();
     const body = await request.json();
-    const { id, name, status, starts_at, location, notes } = body || {};
+    const { id, name, status, starts_at, link, location, notes } = body || {};
 
     if (!id || !name || !status) {
       return NextResponse.json(
@@ -100,6 +101,7 @@ export async function PATCH(request) {
         name,
         status,
         starts_at: startsAtValue,
+        link: link || "",
         location: location || "",
         notes: notes || ""
       })

@@ -73,6 +73,7 @@ export default function AdminPage() {
     name: "",
     status: "Upcoming",
     starts_at: "",
+    link: "",
     location: "",
     notes: ""
   });
@@ -319,6 +320,7 @@ export default function AdminPage() {
       name: "",
       status: "Upcoming",
       starts_at: "",
+      link: "",
       location: "",
       notes: ""
     });
@@ -374,6 +376,7 @@ export default function AdminPage() {
       name: entry.name || "",
       status: entry.status || "Upcoming",
       starts_at: entry.starts_at ? entry.starts_at.split("T")[0] : "",
+      link: entry.link || "",
       location: entry.location || "",
       notes: entry.notes || ""
     });
@@ -929,6 +932,16 @@ export default function AdminPage() {
             }
           />
           <input
+            placeholder="Link (optional)"
+            value={tournamentForm.link}
+            onChange={(event) =>
+              setTournamentForm({
+                ...tournamentForm,
+                link: event.target.value
+              })
+            }
+          />
+          <input
             placeholder="Location"
             value={tournamentForm.location}
             onChange={(event) =>
@@ -957,6 +970,7 @@ export default function AdminPage() {
                   name: "",
                   status: "Upcoming",
                   starts_at: "",
+                  link: "",
                   location: "",
                   notes: ""
                 });
@@ -977,6 +991,13 @@ export default function AdminPage() {
                     ? entry.starts_at.split("T")[0]
                     : "TBD"}
                 </div>
+                {entry.link ? (
+                  <div className="match-meta">
+                    <a href={entry.link} target="_blank" rel="noreferrer">
+                      {entry.link}
+                    </a>
+                  </div>
+                ) : null}
                 {entry.location ? (
                   <div className="match-meta">{entry.location}</div>
                 ) : null}
