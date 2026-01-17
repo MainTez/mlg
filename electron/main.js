@@ -18,6 +18,7 @@ const createWindow = () => {
     }
   });
   win.setMenuBarVisibility(false);
+  win.setMenu(null);
 
   win.loadURL(APP_URL);
 
