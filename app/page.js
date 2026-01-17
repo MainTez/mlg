@@ -28,7 +28,9 @@ const ALLOWED_EMAILS = new Set([
   "hadilebnen@gmail.com",
   "1nd.brahimi09@gmail.com",
   "felx.trad@gmail.com",
-  "johanziolkowski@gmail.com"
+  "johanziolkowski@gmail.com",
+  "johanziokowski@gmail.com",
+  "epicman11235@gmail.com"
 ]);
 
 const SECTION_KEYS = new Set([
@@ -517,7 +519,7 @@ const THEME_OPTIONS = [
 
 const TEAM_ROSTER = [
   { role: "Top", name: "Ashmumu", tagline: "MLG", status: "" },
-  { role: "Jungle", name: "Enti", tagline: "MLG", status: "" },
+  { role: "Jungle", name: "TUNGTUNGKIRK", tagline: "PHONK", status: "" },
   { role: "Mid", name: "Ind", tagline: "MLG", status: "" },
   { role: "Bot", name: "MainTez", tagline: "MLG", status: "" },
   { role: "Support", name: "Johan jojo", tagline: "MLG", status: "" }

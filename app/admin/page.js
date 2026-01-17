@@ -23,7 +23,9 @@ const ALLOWED_EMAILS = new Set([
   "hadilebnen@gmail.com",
   "1nd.brahimi09@gmail.com",
   "felx.trad@gmail.com",
-  "johanziolkowski@gmail.com"
+  "johanziolkowski@gmail.com",
+  "johanziokowski@gmail.com",
+  "epicman11235@gmail.com"
 ]);
 
 export default function AdminPage() {
