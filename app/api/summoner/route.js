@@ -540,7 +540,9 @@ export async function GET(request) {
     const matchInsights = lite || (statusOnly && !summaryOnly)
       ? null
       : buildMatchInsights(
-          matchDetails.filter(Boolean),
+          matchDetails
+            .filter(Boolean)
+            .filter((match) => match.info?.queueId === 420),
           summonerData.puuid,
           ddragonData
         );

@@ -106,6 +106,7 @@ create table if not exists skin_goals (
   target_rank text not null,
   skin text not null,
   notes text,
+  completed_at timestamptz,
   created_at timestamptz default now()
 );
 

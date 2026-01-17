@@ -4,6 +4,20 @@ import { useEffect, useState } from "react";
 import { getSupabaseClient } from "../../lib/supabaseClient";
 
 const toJson = (response) => response.json();
+const formatDateLabel = (value) => {
+  if (!value) {
+    return "—";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+};
 const ALLOWED_EMAILS = new Set([
   "danilebnen@gmail.com",
   "hadilebnen@gmail.com",
@@ -1344,11 +1358,22 @@ export default function AdminPage() {
           {data.skinGoals?.map((entry) => (
             <div key={entry.id} className="log-row">
               <div>
-                <strong>
-                  {entry.player_name}#{entry.tagline}
-                </strong>
+                <div className="inline-row">
+                  <strong>
+                    {entry.player_name}#{entry.tagline}
+                  </strong>
+                  {entry.completed_at ? (
+                    <span className="pill pill-win">Completed ✓</span>
+                  ) : null}
+                </div>
                 <div className="match-meta">
                   Target: {entry.target_rank} · Reward: {entry.skin}
+                </div>
+                <div className="match-meta">
+                  Set at: {formatDateLabel(entry.created_at)}
+                  {entry.completed_at
+                    ? ` · Completed at: ${formatDateLabel(entry.completed_at)}`
+                    : ""}
                 </div>
                 {entry.notes ? (
                   <div className="match-meta">{entry.notes}</div>

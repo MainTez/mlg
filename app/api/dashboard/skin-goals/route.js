@@ -85,7 +85,15 @@ export async function PATCH(request) {
     }
 
     const body = await request.json();
-    const { id, player_name, tagline, target_rank, skin, notes } = body || {};
+    const {
+      id,
+      player_name,
+      tagline,
+      target_rank,
+      skin,
+      notes,
+      completed_at
+    } = body || {};
     if (!id || !player_name || !tagline || !target_rank || !skin) {
       return NextResponse.json(
         { error: "Missing id, player, tagline, target rank, or skin." },
@@ -93,16 +101,21 @@ export async function PATCH(request) {
       );
     }
 
+    const payload = {
+      player_name,
+      tagline,
+      target_rank,
+      skin,
+      notes: notes || ""
+    };
+    if (completed_at !== undefined) {
+      payload.completed_at = completed_at || null;
+    }
+
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("skin_goals")
-      .update({
-        player_name,
-        tagline,
-        target_rank,
-        skin,
-        notes: notes || ""
-      })
+      .update(payload)
       .eq("id", id)
       .select("*");
 

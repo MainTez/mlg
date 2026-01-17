@@ -149,6 +149,44 @@ const formatLogDate = (log) => {
   return log?.date || "—";
 };
 
+const formatDateLabel = (value) => {
+  if (!value) {
+    return "—";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+};
+
+const mergeAnnouncements = (prev, next) => {
+  const merged = [];
+  const seen = new Set();
+
+  const addItem = (item) => {
+    if (!item) {
+      return;
+    }
+    const id =
+      item.id || `${item.message || "announcement"}-${item.createdAt || 0}`;
+    if (seen.has(id)) {
+      return;
+    }
+    seen.add(id);
+    merged.push({ ...item, id });
+  };
+
+  next.forEach(addItem);
+  prev.forEach(addItem);
+
+  return merged.slice(0, 50);
+};
+
 const getRecentWinrate = (summaries) => {
   if (!summaries?.length) {
     return null;
@@ -239,6 +277,37 @@ const playMatchBeep = (audioContextRef, type) => {
     gain.connect(context.destination);
     oscillator.start();
     oscillator.stop(context.currentTime + 0.18);
+  } catch (error) {
+    return;
+  }
+};
+
+const playSkinGoalChime = (audioContextRef) => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) {
+      return;
+    }
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    const context = audioContextRef.current;
+    if (context.state === "suspended") {
+      context.resume();
+    }
+    const gain = context.createGain();
+    gain.gain.value = 0.05;
+    gain.connect(context.destination);
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gain);
+      const startAt = context.currentTime + index * 0.12;
+      oscillator.start(startAt);
+      oscillator.stop(startAt + 0.18);
+    });
   } catch (error) {
     return;
   }
@@ -393,6 +462,7 @@ const pickPrimaryRank = (entries = []) => {
 };
 
 export default function HomePage() {
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "dev";
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
   const [region, setRegion] = useState("euw1");
@@ -464,6 +534,7 @@ export default function HomePage() {
       return [];
     }
   });
+  const [skinGoalPopup, setSkinGoalPopup] = useState(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState("");
   const [statusNow, setStatusNow] = useState(() => Date.now());
@@ -915,7 +986,6 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
-
   useEffect(() => {
     if (chatOpen) {
       setChatUnread(0);
@@ -943,61 +1013,6 @@ export default function HomePage() {
         setTeamStats(cachedStats);
       }
       if (cacheFresh) {
-        const announcedCache = JSON.parse(
-          window.localStorage.getItem("mlg.announcedMatchCache") || "{}"
-        );
-        if (
-          !Object.keys(announcedCache).length &&
-          Object.keys(cachedStats).length
-        ) {
-          const nextAnnouncements = [];
-          const nextAnnouncedCache = { ...announcedCache };
-          roster.forEach((player) => {
-            const key = buildRosterKey(player);
-            const cacheKey = key.toLowerCase();
-            const summaries = cachedStats[key]?.data?.matchSummaries || [];
-            const rankedSummaries = summaries.filter(
-              (match) =>
-                RANKED_QUEUE_IDS.has(match.queueId) ||
-                (match.queueName || "").toLowerCase().includes("ranked")
-            );
-            const seedMatches = rankedSummaries.slice(0, 1);
-            seedMatches.forEach((lastMatch) => {
-              const matchEndTime =
-                (lastMatch.gameCreation || 0) +
-                (lastMatch.gameDuration || 0) * 1000;
-              if (
-                !matchEndTime ||
-                Date.now() - matchEndTime > ANNOUNCEMENT_WINDOW_MS
-              ) {
-                return;
-              }
-              const resultEmoji = lastMatch.win ? "🥳" : "🥀";
-              const resultLabel = lastMatch.win ? "won" : "lost";
-              const queueLabel =
-                lastMatch.queueName || lastMatch.gameMode || "game";
-              nextAnnouncements.push({
-                id: `${lastMatch.matchId}-${Date.now()}`,
-                emoji: resultEmoji,
-                message: `${key} ${resultLabel} a ${queueLabel} match.`,
-                createdAt: Date.now(),
-                queueId: lastMatch.queueId || null,
-                queueName: lastMatch.queueName || null
-              });
-            });
-            if (rankedSummaries[0]?.matchId) {
-              nextAnnouncedCache[cacheKey] = rankedSummaries[0].matchId;
-            }
-          });
-          if (nextAnnouncements.length) {
-            setAnnouncements((prev) => [...nextAnnouncements, ...prev].slice(0, 50));
-            playMatchBeep(audioContextRef, "win");
-          }
-          window.localStorage.setItem(
-            "mlg.announcedMatchCache",
-            JSON.stringify(nextAnnouncedCache)
-          );
-        }
         setTeamLoading(false);
         return;
       }
@@ -1099,8 +1114,9 @@ export default function HomePage() {
           const delta =
             getTierOrder(currentTier) - getTierOrder(previousTier);
           if (delta !== 0) {
+            const tierAnnouncementId = `tier:${cacheKey}:${currentTier}`;
             nextAnnouncements.push({
-              id: `${cacheKey}-${currentTier}-${Date.now()}`,
+              id: tierAnnouncementId,
               emoji: delta > 0 ? "🥳" : "🥀",
               message: `${entry.key} ${
                 delta > 0 ? "promoted" : "demoted"
@@ -1118,12 +1134,37 @@ export default function HomePage() {
           if (targetTierOrder && currentTierOrder >= targetTierOrder) {
             const rewardKey = `${cacheKey}-${goal.target_rank}`.toLowerCase();
             if (!goalCache[rewardKey]) {
+              const goalMessage = `${entry.key} hit ${goal.target_rank} and earned ${goal.skin}.`;
               nextAnnouncements.push({
-                id: `${rewardKey}-${Date.now()}`,
-                emoji: "🎁",
-                message: `${entry.key} hit ${goal.target_rank} and earned ${goal.skin}.`,
+                id: `goal:${rewardKey}`,
+                emoji: "🥳",
+                message: goalMessage,
                 createdAt: Date.now()
               });
+              setSkinGoalPopup({
+                id: `goal:${rewardKey}`,
+                message: goalMessage,
+                emoji: "🥳"
+              });
+              playSkinGoalChime(audioContextRef);
+              if (authToken && !goal.completed_at) {
+                fetch("/api/dashboard/skin-goals", {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`
+                  },
+                  body: JSON.stringify({
+                    id: goal.id,
+                    player_name: goal.player_name,
+                    tagline: goal.tagline,
+                    target_rank: goal.target_rank,
+                    skin: goal.skin,
+                    notes: goal.notes || "",
+                    completed_at: new Date().toISOString()
+                  })
+                }).catch(() => {});
+              }
               goalCache[rewardKey] = true;
             }
           }
@@ -1167,10 +1208,10 @@ export default function HomePage() {
               (lastMatch.queueName || "").toLowerCase().includes("ranked")
             ) {
               nextAnnouncements.push({
-                id: `${lastMatch.matchId}-${Date.now()}`,
+                id: `match:${cacheKey}:${lastMatch.matchId}`,
                 emoji: resultEmoji,
                 message: `${entry.key} ${resultLabel} a ${queueLabel} match.`,
-                createdAt: Date.now(),
+                createdAt: matchEndTime || Date.now(),
                 queueId: lastMatch.queueId || null,
                 queueName: lastMatch.queueName || null
               });
@@ -1185,7 +1226,7 @@ export default function HomePage() {
 
       setTeamStats(nextStats);
       if (nextAnnouncements.length) {
-        setAnnouncements((prev) => [...nextAnnouncements, ...prev].slice(0, 50));
+        setAnnouncements((prev) => mergeAnnouncements(prev, nextAnnouncements));
       }
       window.localStorage.setItem("mlg.tierCache", JSON.stringify(tierCache));
       window.localStorage.setItem(
@@ -1437,38 +1478,6 @@ export default function HomePage() {
                   <div className="match-meta">Last 20 games</div>
                 </div>
               </div>
-              <div className="grid grid-2">
-                <div className="stat-card">
-                  <div className="stat-title">Roster status</div>
-                  <div className="roster-list">
-                    {roster.map((player) => {
-                      const key = buildRosterKey(player);
-                      const entry = teamStats[key];
-                      const showStatus = entry?.data
-                        ? formatStatusLabel(
-                            entry.data.status,
-                            entry.data.activeGame,
-                            entry.data.matchSummaries,
-                            statusNow
-                          )
-                        : "Offline";
-                      return (
-                        <div key={player.id ?? player.role} className="roster-row">
-                          <span className="pill">{player.role}</span>
-                          <button
-                            type="button"
-                            className="link-button"
-                            onClick={() => handleRosterSelect(player)}
-                          >
-                            {player.name}#{player.tagline}
-                          </button>
-                          <span className="tagline">{showStatus}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
               <div className="stat-card">
                 <div className="stat-title">Player cards</div>
                 <div className="player-grid">
@@ -1494,7 +1503,13 @@ export default function HomePage() {
                         <div>
                           <strong>{player.role}</strong>
                           <div className="match-meta">
-                            {player.name}#{player.tagline}
+                            <button
+                              type="button"
+                              className="link-button"
+                              onClick={() => handleRosterSelect(player)}
+                            >
+                              {player.name}#{player.tagline}
+                            </button>
                           </div>
                         </div>
                         <div className="match-meta">{rankLabel}</div>
@@ -1526,11 +1541,24 @@ export default function HomePage() {
                     {skinGoals.map((goal) => (
                       <div key={goal.id} className="log-row">
                         <div>
-                          <strong>
-                            {goal.player_name}#{goal.tagline}
-                          </strong>
+                          <div className="inline-row">
+                            <strong>
+                              {goal.player_name}#{goal.tagline}
+                            </strong>
+                            {goal.completed_at ? (
+                              <span className="pill pill-win">Completed ✓</span>
+                            ) : null}
+                          </div>
                           <div className="match-meta">
                             Target: {goal.target_rank} · Reward: {goal.skin}
+                          </div>
+                          <div className="match-meta">
+                            Set at: {formatDateLabel(goal.created_at)}
+                            {goal.completed_at
+                              ? ` · Completed at: ${formatDateLabel(
+                                  goal.completed_at
+                                )}`
+                              : ""}
                           </div>
                           {goal.notes ? (
                             <div className="match-meta">{goal.notes}</div>
@@ -2406,6 +2434,25 @@ export default function HomePage() {
         >
           Update available{latestVersion ? ` · v${latestVersion}` : ""} → Reload
         </button>
+      ) : null}
+      <div className="version-badge">v{appVersion}</div>
+      {skinGoalPopup ? (
+        <div className="skin-goal-overlay">
+          <div className="skin-goal-modal">
+            <div className="skin-goal-emoji">{skinGoalPopup.emoji || "🥳"}</div>
+            <div>
+              <strong>Skin goal achieved!</strong>
+              <p>{skinGoalPopup.message}</p>
+            </div>
+            <button
+              type="button"
+              className="skin-goal-close"
+              onClick={() => setSkinGoalPopup(null)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
       ) : null}
       <aside className={`chat-panel ${chatOpen ? "open" : ""}`}>
         <div className="chat-header">
