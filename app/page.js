@@ -540,6 +540,8 @@ export default function HomePage() {
   const [statusNow, setStatusNow] = useState(() => Date.now());
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installAvailable, setInstallAvailable] = useState(false);
+  const [installHelpOpen, setInstallHelpOpen] = useState(false);
+  const [installHelpText, setInstallHelpText] = useState("");
 
   const selectedMatch = useMemo(() => {
     if (!selectedMatchId || !result?.matches?.length) {
@@ -989,6 +991,9 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
     const handleBeforeInstall = (event) => {
       event.preventDefault();
       setInstallPrompt(event);
@@ -1000,11 +1005,28 @@ export default function HomePage() {
     };
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
     window.addEventListener("appinstalled", handleAppInstalled);
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone;
+    if (!isStandalone) {
+      const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent || "");
+      if (isIos) {
+        setInstallAvailable(true);
+        setInstallHelpText(
+          "On iPhone/iPad: tap Share → Add to Home Screen."
+        );
+      } else if (!installPrompt) {
+        setInstallAvailable(true);
+        setInstallHelpText(
+          "Use your browser menu to install (Install app / Add to Home screen)."
+        );
+      }
+    }
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
-  }, []);
+  }, [installPrompt]);
 
   useEffect(() => {
     if (chatOpen) {
@@ -2461,6 +2483,7 @@ export default function HomePage() {
           type="button"
           onClick={async () => {
             if (!installPrompt) {
+              setInstallHelpOpen(true);
               return;
             }
             installPrompt.prompt();
@@ -2476,6 +2499,21 @@ export default function HomePage() {
         </button>
       ) : null}
       <div className="version-badge">v{appVersion}</div>
+      {installHelpOpen ? (
+        <div className="install-guide-overlay">
+          <div className="install-guide-modal">
+            <strong>Install this app</strong>
+            <p>{installHelpText || "Use your browser menu to install."}</p>
+            <button
+              type="button"
+              className="install-guide-close"
+              onClick={() => setInstallHelpOpen(false)}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      ) : null}
       {skinGoalPopup ? (
         <div className="skin-goal-overlay">
           <div className="skin-goal-modal">
