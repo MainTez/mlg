@@ -538,6 +538,8 @@ export default function HomePage() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState("");
   const [statusNow, setStatusNow] = useState(() => Date.now());
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [installAvailable, setInstallAvailable] = useState(false);
 
   const selectedMatch = useMemo(() => {
     if (!selectedMatchId || !result?.matches?.length) {
@@ -984,6 +986,24 @@ export default function HomePage() {
     checkVersion();
     const timer = setInterval(checkVersion, 5 * 60 * 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeInstall = (event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+      setInstallAvailable(true);
+    };
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+      setInstallAvailable(false);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -2433,6 +2453,26 @@ export default function HomePage() {
           onClick={() => window.location.reload()}
         >
           Update available{latestVersion ? ` · v${latestVersion}` : ""} → Reload
+        </button>
+      ) : null}
+      {installAvailable ? (
+        <button
+          className="install-toast"
+          type="button"
+          onClick={async () => {
+            if (!installPrompt) {
+              return;
+            }
+            installPrompt.prompt();
+            try {
+              await installPrompt.userChoice;
+            } finally {
+              setInstallPrompt(null);
+              setInstallAvailable(false);
+            }
+          }}
+        >
+          Install app
         </button>
       ) : null}
       <div className="version-badge">v{appVersion}</div>
