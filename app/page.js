@@ -525,9 +525,17 @@ export default function HomePage() {
       ? savedSection
       : "dashboard";
   });
+  const [isDesktopApp, setIsDesktopApp] = useState(false);
 
   useEffect(() => {
     window.localStorage.setItem("mlg.activeSection", activeSection);
+  }, [activeSection]);
+  useEffect(() => {
+    const inDesktopApp = Boolean(window?.electronApp?.platform);
+    setIsDesktopApp(inDesktopApp);
+    if (inDesktopApp && activeSection === "download") {
+      setActiveSection("dashboard");
+    }
   }, [activeSection]);
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") {
@@ -576,10 +584,6 @@ export default function HomePage() {
     return window.localStorage.getItem("mlg.lastSeenVersion") || "0.0.0";
   });
   const [statusNow, setStatusNow] = useState(() => Date.now());
-  const [installPrompt, setInstallPrompt] = useState(null);
-  const [installAvailable, setInstallAvailable] = useState(false);
-  const [installHelpOpen, setInstallHelpOpen] = useState(false);
-  const [installHelpText, setInstallHelpText] = useState("");
 
   const selectedMatch = useMemo(() => {
     if (!selectedMatchId || !result?.matches?.length) {
@@ -739,6 +743,14 @@ export default function HomePage() {
       "Member";
 
     setChatError("");
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: tempId,
+      name: displayName,
+      message: chatMessage.trim(),
+      created_at: new Date().toISOString()
+    };
+    setChatMessages((prev) => [...prev, optimisticMessage]);
     const response = await fetch("/api/chat/messages", {
       method: "POST",
       headers: {
@@ -754,9 +766,17 @@ export default function HomePage() {
 
     if (!response.ok) {
       setChatError(data?.error || "Failed to send message.");
+      setChatMessages((prev) => prev.filter((entry) => entry.id !== tempId));
       return;
     }
 
+    if (data?.message) {
+      setChatMessages((prev) => [
+        ...prev.filter((entry) => entry.id !== tempId),
+        data.message
+      ]);
+      lastChatIdRef.current = data.message.id;
+    }
     setChatMessage("");
   };
 
@@ -949,7 +969,7 @@ export default function HomePage() {
     };
 
     loadMessages();
-    const interval = setInterval(loadMessages, 8000);
+    const interval = setInterval(loadMessages, 3000);
 
     return () => {
       active = false;
@@ -1037,44 +1057,6 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    }
-    const handleBeforeInstall = (event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-      setInstallAvailable(true);
-    };
-    const handleAppInstalled = () => {
-      setInstallPrompt(null);
-      setInstallAvailable(false);
-    };
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-    window.addEventListener("appinstalled", handleAppInstalled);
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      window.navigator.standalone;
-    if (!isStandalone) {
-      const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent || "");
-      if (isIos) {
-        setInstallAvailable(true);
-        setInstallHelpText(
-          "On iPhone/iPad: tap Share → Add to Home Screen."
-        );
-      } else if (!installPrompt) {
-        setInstallAvailable(true);
-        setInstallHelpText(
-          "Use your browser menu to install (Install app / Add to Home screen)."
-        );
-      }
-    }
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
-      window.removeEventListener("appinstalled", handleAppInstalled);
-    };
-  }, [installPrompt]);
-
-  useEffect(() => {
     if (chatOpen) {
       setChatUnread(0);
       const latest = chatMessages.length
@@ -1096,7 +1078,7 @@ export default function HomePage() {
       const cachedStats = cachedPayload?.data || {};
       const cachedAt = cachedPayload?.timestamp || 0;
       const cacheFresh =
-        Date.now() - cachedAt < 5 * 60 * 1000 && !cachedPayload?.hasErrors;
+        Date.now() - cachedAt < 60 * 1000 && !cachedPayload?.hasErrors;
       if (Object.keys(cachedStats).length) {
         setTeamStats(cachedStats);
       }
@@ -1340,7 +1322,7 @@ export default function HomePage() {
     };
 
     loadTeamStats();
-    const interval = setInterval(loadTeamStats, 120000);
+    const interval = setInterval(loadTeamStats, 60000);
     return () => clearInterval(interval);
   }, [region, rosterKey, skinGoalsKey]);
 
@@ -1507,13 +1489,15 @@ export default function HomePage() {
           >
             Settings
           </button>
-          <button
-            type="button"
-            className={activeSection === "download" ? "nav-item active" : "nav-item"}
-            onClick={() => setActiveSection("download")}
-          >
-            Download app
-          </button>
+          {!isDesktopApp ? (
+            <button
+              type="button"
+              className={activeSection === "download" ? "nav-item active" : "nav-item"}
+              onClick={() => setActiveSection("download")}
+            >
+              Download app
+            </button>
+          ) : null}
           <a className="nav-item" href="/admin">
             Admin
           </a>
@@ -1608,7 +1592,7 @@ export default function HomePage() {
                         <div className="match-meta">{statusLabel}</div>
                         <div className="match-meta">
                           {rankedRecord
-                            ? `${rankedRecord.wins}-${rankedRecord.losses} ${rankedRecord.queue.replace(
+                            ? `W-L: ${rankedRecord.wins}-${rankedRecord.losses} ${rankedRecord.queue.replace(
                                 "Ranked ",
                                 ""
                               )}`
@@ -2034,7 +2018,7 @@ export default function HomePage() {
             </section>
           ) : null}
 
-          {activeSection === "download" ? (
+          {activeSection === "download" && !isDesktopApp ? (
             <section className="card card-strong fade-in">
               <div className="section-head">
                 <div>
@@ -2573,43 +2557,7 @@ export default function HomePage() {
           Update available{latestVersion ? ` · v${latestVersion}` : ""} → Reload
         </button>
       ) : null}
-      {installAvailable ? (
-        <button
-          className="install-toast"
-          type="button"
-          onClick={async () => {
-            if (!installPrompt) {
-              setInstallHelpOpen(true);
-              return;
-            }
-            installPrompt.prompt();
-            try {
-              await installPrompt.userChoice;
-            } finally {
-              setInstallPrompt(null);
-              setInstallAvailable(false);
-            }
-          }}
-        >
-          Install app
-        </button>
-      ) : null}
       <div className="version-badge">v{appVersion}</div>
-      {installHelpOpen ? (
-        <div className="install-guide-overlay">
-          <div className="install-guide-modal">
-            <strong>Install this app</strong>
-            <p>{installHelpText || "Use your browser menu to install."}</p>
-            <button
-              type="button"
-              className="install-guide-close"
-              onClick={() => setInstallHelpOpen(false)}
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      ) : null}
       {skinGoalPopup ? (
         <div className="skin-goal-overlay">
           <div className="skin-goal-modal">
