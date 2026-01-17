@@ -165,6 +165,20 @@ const formatDateLabel = (value) => {
   });
 };
 
+const normalizeLink = (value) => {
+  if (!value) {
+    return "";
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
 const formatCountdown = (targetMs, nowMs) => {
   if (!targetMs || !Number.isFinite(targetMs)) {
     return "";
@@ -448,6 +462,56 @@ const THEME_OPTIONS = [
     id: "ivorygold",
     name: "Ivory Gold",
     description: "Warm whites with polished gold trim."
+  },
+  {
+    id: "obsidian",
+    name: "Obsidian",
+    description: "Deep charcoal with electric teal edges."
+  },
+  {
+    id: "gilded",
+    name: "Gilded",
+    description: "Satin black with royal gold accents."
+  },
+  {
+    id: "aurora",
+    name: "Aurora",
+    description: "Cool indigo with neon aurora highlights."
+  },
+  {
+    id: "monarch",
+    name: "Monarch",
+    description: "Navy base with crimson and gold trim."
+  },
+  {
+    id: "saffron",
+    name: "Saffron",
+    description: "Warm clay with saffron highlights."
+  },
+  {
+    id: "velvet",
+    name: "Velvet",
+    description: "Plum night with soft pink glow."
+  },
+  {
+    id: "slate",
+    name: "Slate",
+    description: "Steel blues with crisp cyan accents."
+  },
+  {
+    id: "nimbus",
+    name: "Nimbus",
+    description: "Stormy grays with icy neon pop."
+  },
+  {
+    id: "verdant",
+    name: "Verdant",
+    description: "Forest greens with lime sparks."
+  },
+  {
+    id: "noir",
+    name: "Noir",
+    description: "Ink black with silver highlights."
   }
 ];
 
@@ -584,6 +648,21 @@ export default function HomePage() {
     return window.localStorage.getItem("mlg.lastSeenVersion") || "0.0.0";
   });
   const [statusNow, setStatusNow] = useState(() => Date.now());
+  const getFreshToken = async () => {
+    if (authToken) {
+      return authToken;
+    }
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return "";
+    }
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token || "";
+    if (token && token !== authToken) {
+      setAuthToken(token);
+    }
+    return token;
+  };
 
   const selectedMatch = useMemo(() => {
     if (!selectedMatchId || !result?.matches?.length) {
@@ -732,7 +811,8 @@ export default function HomePage() {
       setChatError("Enter a message.");
       return;
     }
-    if (!authToken) {
+    const token = await getFreshToken();
+    if (!token) {
       setChatError("Please log in to chat.");
       return;
     }
@@ -755,7 +835,7 @@ export default function HomePage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${authToken}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
         name: displayName,
@@ -893,12 +973,13 @@ export default function HomePage() {
       setDashboardLoading(true);
       setDashboardError("");
       try {
-        if (!authToken) {
+        const token = await getFreshToken();
+        if (!token) {
           setDashboardLoading(false);
           return;
         }
         const response = await fetch("/api/dashboard/overview", {
-          headers: { Authorization: `Bearer ${authToken}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) {
@@ -916,15 +997,15 @@ export default function HomePage() {
   }, [authToken]);
 
   useEffect(() => {
-    if (!authToken) {
-      return;
-    }
-
     let active = true;
     const loadMessages = async () => {
       try {
+        const token = await getFreshToken();
+        if (!token) {
+          return;
+        }
         const response = await fetch("/api/chat/messages", {
-          headers: { Authorization: `Bearer ${authToken}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) {
@@ -1029,22 +1110,20 @@ export default function HomePage() {
         }
         const storedVersion =
           window.localStorage.getItem("mlg.lastSeenVersion") || "0.0.0";
-        if (!storedVersion || storedVersion === "0.0.0") {
-          if (data?.version) {
-            setAppVersion(data.version);
+        if (data?.version) {
+          setAppVersion(data.version);
+          if (!storedVersion || storedVersion === "0.0.0") {
+            window.localStorage.setItem("mlg.lastSeenVersion", data.version);
+            setUpdateAvailable(false);
+            return;
+          }
+          if (data.version !== storedVersion) {
+            setLatestVersion(data.version);
+            setUpdateAvailable(true);
+          } else {
+            setUpdateAvailable(false);
             window.localStorage.setItem("mlg.lastSeenVersion", data.version);
           }
-          setUpdateAvailable(false);
-          return;
-        }
-        if (data?.version && data.version !== storedVersion) {
-          setLatestVersion(data.version);
-          setUpdateAvailable(true);
-          setAppVersion(storedVersion);
-        } else if (data?.version) {
-          setUpdateAvailable(false);
-          setAppVersion(data.version);
-          window.localStorage.setItem("mlg.lastSeenVersion", data.version);
         }
       } catch (error) {
         return;
@@ -1078,7 +1157,7 @@ export default function HomePage() {
       const cachedStats = cachedPayload?.data || {};
       const cachedAt = cachedPayload?.timestamp || 0;
       const cacheFresh =
-        Date.now() - cachedAt < 60 * 1000 && !cachedPayload?.hasErrors;
+        Date.now() - cachedAt < 30 * 1000 && !cachedPayload?.hasErrors;
       if (Object.keys(cachedStats).length) {
         setTeamStats(cachedStats);
       }
@@ -1322,7 +1401,7 @@ export default function HomePage() {
     };
 
     loadTeamStats();
-    const interval = setInterval(loadTeamStats, 60000);
+    const interval = setInterval(loadTeamStats, 30000);
     return () => clearInterval(interval);
   }, [region, rosterKey, skinGoalsKey]);
 
@@ -1879,7 +1958,11 @@ export default function HomePage() {
                         })() : null}
                         {entry.link ? (
                           <div className="match-meta">
-                            <a href={entry.link} target="_blank" rel="noreferrer">
+                            <a
+                              href={normalizeLink(entry.link)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
                               {entry.link}
                             </a>
                           </div>
