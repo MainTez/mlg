@@ -19,6 +19,7 @@ const createWindow = () => {
   });
   win.setMenuBarVisibility(false);
   win.setMenu(null);
+  win.setAutoHideMenuBar(true);
 
   win.loadURL(APP_URL);
 
@@ -31,6 +32,11 @@ const createWindow = () => {
 app.whenReady().then(() => {
   app.setAppUserModelId("com.maintez.mlg");
   Menu.setApplicationMenu(null);
+  app.on("browser-window-created", (_event, window) => {
+    window.setMenu(null);
+    window.setMenuBarVisibility(false);
+    window.setAutoHideMenuBar(true);
+  });
   createWindow();
 
   if (app.isPackaged) {
