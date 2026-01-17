@@ -494,7 +494,6 @@ const pickPrimaryRank = (entries = []) => {
 };
 
 export default function HomePage() {
-  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "dev";
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
   const [region, setRegion] = useState("euw1");
@@ -569,6 +568,12 @@ export default function HomePage() {
   const [skinGoalPopup, setSkinGoalPopup] = useState(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState("");
+  const [appVersion, setAppVersion] = useState(() => {
+    if (typeof window === "undefined") {
+      return "0.0.0";
+    }
+    return window.localStorage.getItem("mlg.lastSeenVersion") || "0.0.0";
+  });
   const [statusNow, setStatusNow] = useState(() => Date.now());
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installAvailable, setInstallAvailable] = useState(false);
@@ -1001,17 +1006,25 @@ export default function HomePage() {
         if (!response.ok) {
           return;
         }
-        const currentVersion =
-          document.body.dataset.version ||
-          window.localStorage.getItem("mlg.currentVersion") ||
-          "dev";
-        if (data?.version && data.version !== currentVersion) {
+        const storedVersion =
+          window.localStorage.getItem("mlg.lastSeenVersion") || "0.0.0";
+        if (!storedVersion || storedVersion === "0.0.0") {
+          if (data?.version) {
+            setAppVersion(data.version);
+            window.localStorage.setItem("mlg.lastSeenVersion", data.version);
+          }
+          setUpdateAvailable(false);
+          return;
+        }
+        if (data?.version && data.version !== storedVersion) {
           setLatestVersion(data.version);
           setUpdateAvailable(true);
-        } else {
+          setAppVersion(storedVersion);
+        } else if (data?.version) {
           setUpdateAvailable(false);
+          setAppVersion(data.version);
+          window.localStorage.setItem("mlg.lastSeenVersion", data.version);
         }
-        window.localStorage.setItem("mlg.currentVersion", currentVersion);
       } catch (error) {
         return;
       }
@@ -2522,7 +2535,15 @@ export default function HomePage() {
         <button
           className="update-toast"
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            if (latestVersion) {
+              window.localStorage.setItem(
+                "mlg.lastSeenVersion",
+                latestVersion
+              );
+            }
+            window.location.reload();
+          }}
         >
           Update available{latestVersion ? ` · v${latestVersion}` : ""} → Reload
         </button>
