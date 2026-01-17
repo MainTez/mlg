@@ -123,6 +123,31 @@
   --accent-3: #ff6f3c;
 }
 
+[data-theme="onyxgold"] {
+  --bg: #050505;
+  --bg-2: #0e0b0a;
+  --panel: rgba(16, 14, 12, 0.92);
+  --panel-strong: rgba(22, 18, 14, 0.97);
+  --text: #f7f2e9;
+  --muted: #c5b8a6;
+  --accent: #f6c35b;
+  --accent-2: #ffd07a;
+  --accent-3: #e6a83a;
+}
+
+[data-theme="ivorygold"] {
+  --bg: #f5f0e6;
+  --bg-2: #e7decd;
+  --panel: rgba(248, 244, 236, 0.92);
+  --panel-strong: rgba(240, 234, 224, 0.98);
+  --text: #2c241c;
+  --muted: #6b5c4a;
+  --accent: #c99d3b;
+  --accent-2: #e2b860;
+  --accent-3: #a6721f;
+  --stroke: rgba(36, 24, 12, 0.14);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -302,6 +327,14 @@ p {
 
 .theme-swatch.ember {
   background: linear-gradient(135deg, #0e0c0b, #ff9f1c, #ff6f3c);
+}
+
+.theme-swatch.onyxgold {
+  background: linear-gradient(135deg, #070707, #231a12, #f6c35b);
+}
+
+.theme-swatch.ivorygold {
+  background: linear-gradient(135deg, #f5f0e6, #e7decd, #c99d3b);
 }
 
 .hero-actions {

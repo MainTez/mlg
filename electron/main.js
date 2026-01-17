@@ -1,4 +1,5 @@
 const { app, BrowserWindow, shell } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const path = require("path");
 
 const APP_URL = process.env.ELECTRON_START_URL || "https://mlg-mu.vercel.app/";
@@ -8,6 +9,7 @@ const createWindow = () => {
     width: 1280,
     height: 800,
     backgroundColor: "#0b0f14",
+    icon: path.join(__dirname, "../build/icon.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -26,6 +28,10 @@ const createWindow = () => {
 app.whenReady().then(() => {
   app.setAppUserModelId("com.maintez.mlg");
   createWindow();
+
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

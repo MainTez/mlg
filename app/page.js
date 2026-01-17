@@ -437,6 +437,16 @@ const THEME_OPTIONS = [
     id: "ember",
     name: "Ember",
     description: "Charcoal base with amber sparks."
+  },
+  {
+    id: "onyxgold",
+    name: "Onyx Gold",
+    description: "Black base with molten gold accents."
+  },
+  {
+    id: "ivorygold",
+    name: "Ivory Gold",
+    description: "Warm whites with polished gold trim."
   }
 ];
 

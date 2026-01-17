@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "electron": "electron .",
-    "electron:pack": "electron-builder --win --x64"
+    "electron:pack": "electron-builder --win --x64",
+    "electron:publish": "electron-builder --win --x64 --publish always"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.45.4",
@@ -21,19 +22,31 @@
   },
   "devDependencies": {
     "electron": "33.2.0",
-    "electron-builder": "24.13.3"
+    "electron-builder": "24.13.3",
+    "electron-updater": "6.3.9"
   },
   "build": {
     "appId": "com.maintez.mlg",
     "productName": "Molgarian Team Hub",
+    "icon": "build/icon.png",
     "files": [
       "electron/**",
+      "build/**",
       "package.json"
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis"
       ]
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "MainTez",
+        "repo": "mlg"
+      }
+    ]
   }
+}
 }
