@@ -1581,9 +1581,6 @@ export default function HomePage() {
                           statusNow
                         )
                       : "Offline";
-                    const recentWinrate = getRecentWinrate(
-                      entry?.data?.matchSummaries
-                    );
                     const rankedRecord = getRankedRecord(entry?.data?.ranked);
                     return (
                       <div key={key} className="player-card">
@@ -1601,13 +1598,6 @@ export default function HomePage() {
                         </div>
                         <div className="match-meta">{rankLabel}</div>
                         <div className="match-meta">{statusLabel}</div>
-                        <div className="match-meta">
-                          {teamLoading
-                            ? "Winrate (10): Loading..."
-                            : recentWinrate === null
-                              ? "Winrate (10): —"
-                              : `Winrate (10): ${formatPercent(recentWinrate)}`}
-                        </div>
                         <div className="match-meta">
                           {rankedRecord
                             ? `${rankedRecord.wins}-${rankedRecord.losses} ${rankedRecord.queue.replace(

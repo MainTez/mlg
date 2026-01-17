@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require("electron");
+const { app, BrowserWindow, shell, Menu } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 
@@ -10,6 +10,7 @@ const createWindow = () => {
     height: 800,
     backgroundColor: "#0b0f14",
     icon: path.join(__dirname, "../build/icon.png"),
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -27,6 +28,7 @@ const createWindow = () => {
 
 app.whenReady().then(() => {
   app.setAppUserModelId("com.maintez.mlg");
+  Menu.setApplicationMenu(null);
   createWindow();
 
   if (app.isPackaged) {
