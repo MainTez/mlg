@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="LoL Tracker">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0b1116"/>
+      <stop offset="100%" stop-color="#203244"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#00d1ff"/>
+      <stop offset="100%" stop-color="#f6c177"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <rect x="96" y="120" width="320" height="272" rx="48" fill="#111b26" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+  <path d="M144 184h160v48H144z" fill="url(#accent)"/>
+  <path d="M144 256h224v48H144z" fill="#1c2a3a"/>
+  <path d="M144 328h144v48H144z" fill="#1c2a3a"/>
+  <circle cx="368" cy="208" r="28" fill="#00d1ff"/>
+  <circle cx="320" cy="352" r="24" fill="#f6c177"/>
+  <text x="256" y="98" text-anchor="middle" font-family="Space Grotesk, Arial, sans-serif" font-size="36" fill="#e9eef5">MLG</text>
+</svg>
