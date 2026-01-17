@@ -27,6 +27,7 @@ const ALLOWED_EMAILS = new Set([
 ]);
 
 export default function AdminPage() {
+  const [theme, setTheme] = useState("cosmos");
   const [data, setData] = useState({
     roster: [],
     comps: [],
@@ -132,6 +133,14 @@ export default function AdminPage() {
   const [editingSkinGoalId, setEditingSkinGoalId] = useState(null);
   const [editingPracticeGoalId, setEditingPracticeGoalId] = useState(null);
   const [editingMetaWatchId, setEditingMetaWatchId] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const savedTheme = window.localStorage.getItem("teamTheme") || "cosmos";
+    setTheme(savedTheme);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -582,7 +591,7 @@ export default function AdminPage() {
 
   if (authLoading) {
     return (
-      <main>
+      <main data-theme={theme}>
         <section className="hero">
           <h1>Admin Hub</h1>
           <div className="accent-line" />
@@ -594,7 +603,7 @@ export default function AdminPage() {
 
   if (!authUser) {
     return (
-      <main>
+      <main data-theme={theme}>
         <section className="hero">
           <h1>Admin Login</h1>
           <div className="accent-line" />
@@ -658,7 +667,7 @@ export default function AdminPage() {
   }
 
   return (
-    <main>
+    <main data-theme={theme}>
       <section className="hero">
         <h1>Admin Hub</h1>
         <div className="hero-actions">
