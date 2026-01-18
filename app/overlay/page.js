@@ -131,7 +131,6 @@ export default function OverlayPage() {
 
   const getSpellKey = (player, spellId, gameId) =>
     `${gameId}:${player.puuid}:${spellId}`;
-  };
 
   const startSpellTimer = async (player, spell) => {
     if (!spell?.cooldown) {
