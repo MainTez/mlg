@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getSupabaseClient } from "../../lib/supabaseClient";
 
 const REGIONS = [
   { id: "na1", label: "NA" },
@@ -39,6 +40,7 @@ export default function OverlayPage() {
     }
   });
   const [now, setNow] = useState(() => Date.now());
+  const [authToken, setAuthToken] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -62,6 +64,22 @@ export default function OverlayPage() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      setAuthToken(data.session?.access_token || "");
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthToken(session?.access_token || "");
+    });
+    return () => {
+      data?.subscription?.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -111,24 +129,45 @@ export default function OverlayPage() {
     }
   };
 
-  const getSpellKey = (player, spellId) => {
-    const gameId = intel?.activeGame?.gameId || "game";
-    return `${gameId}:${player.puuid}:${spellId}`;
+  const getSpellKey = (player, spellId, gameId) =>
+    `${gameId}:${player.puuid}:${spellId}`;
   };
 
-  const startSpellTimer = (player, spell) => {
+  const startSpellTimer = async (player, spell) => {
     if (!spell?.cooldown) {
       return;
     }
-    const key = getSpellKey(player, spell.id);
-    setSpellTimers((prev) => ({
-      ...prev,
-      [key]: Date.now() + spell.cooldown * 1000
-    }));
+    const gameId = intel?.activeGame?.gameId;
+    if (!gameId) {
+      return;
+    }
+    const endAt = Date.now() + spell.cooldown * 1000;
+    const key = getSpellKey(player, spell.id, gameId);
+    setSpellTimers((prev) => ({ ...prev, [key]: endAt }));
+    if (!authToken) {
+      return;
+    }
+    await fetch("/api/overlay/timers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        game_id: gameId,
+        puuid: player.puuid,
+        spell_id: spell.id,
+        ends_at: new Date(endAt).toISOString()
+      })
+    }).catch(() => {});
   };
 
   const getRemaining = (player, spell) => {
-    const key = getSpellKey(player, spell.id);
+    const gameId = intel?.activeGame?.gameId;
+    if (!gameId) {
+      return null;
+    }
+    const key = getSpellKey(player, spell.id, gameId);
     const endAt = spellTimers[key] || 0;
     const remaining = endAt - now;
     if (remaining <= 0) {
@@ -139,6 +178,45 @@ export default function OverlayPage() {
     const secs = seconds % 60;
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
+
+  useEffect(() => {
+    if (!intel?.activeGame?.gameId || !authToken) {
+      return;
+    }
+    let active = true;
+    const gameId = intel.activeGame.gameId;
+    const loadTimers = async () => {
+      try {
+        const response = await fetch(
+          `/api/overlay/timers?gameId=${encodeURIComponent(gameId)}`,
+          {
+            headers: { Authorization: `Bearer ${authToken}` }
+          }
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || "Failed to load timers.");
+        }
+        if (!active) {
+          return;
+        }
+        const next = {};
+        (data.timers || []).forEach((timer) => {
+          const key = getSpellKey({ puuid: timer.puuid }, timer.spell_id, gameId);
+          next[key] = new Date(timer.ends_at).getTime();
+        });
+        setSpellTimers((prev) => ({ ...prev, ...next }));
+      } catch (err) {
+        return;
+      }
+    };
+    loadTimers();
+    const interval = setInterval(loadTimers, 2000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [intel?.activeGame?.gameId, authToken]);
 
   return (
     <main className="overlay-shell" data-theme={theme}>

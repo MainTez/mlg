@@ -131,3 +131,16 @@ create table if not exists meta_watchlist (
   notes text,
   created_at timestamptz default now()
 );
+
+create table if not exists overlay_spell_timers (
+  id uuid primary key default gen_random_uuid(),
+  game_id text not null,
+  puuid text not null,
+  spell_id integer not null,
+  ends_at timestamptz not null,
+  updated_by text,
+  updated_at timestamptz default now()
+);
+
+create unique index if not exists overlay_spell_unique
+  on overlay_spell_timers (game_id, puuid, spell_id);
