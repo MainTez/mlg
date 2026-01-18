@@ -36,6 +36,7 @@ const ALLOWED_EMAILS = new Set([
 const SECTION_KEYS = new Set([
   "dashboard",
   "tracker",
+  "intel",
   "prep",
   "drafts",
   "opponents",
@@ -650,6 +651,10 @@ export default function HomePage() {
     return window.localStorage.getItem("mlg.lastSeenVersion") || "0.0.0";
   });
   const [statusNow, setStatusNow] = useState(() => Date.now());
+  const [liveIntelTarget, setLiveIntelTarget] = useState(null);
+  const [liveIntelData, setLiveIntelData] = useState(null);
+  const [liveIntelLoading, setLiveIntelLoading] = useState(false);
+  const [liveIntelError, setLiveIntelError] = useState("");
   const getFreshToken = async () => {
     if (authToken) {
       return authToken;
@@ -862,6 +867,33 @@ export default function HomePage() {
     setChatMessage("");
   };
 
+  const loadLiveIntel = async () => {
+    if (!liveIntelTarget) {
+      return;
+    }
+    setLiveIntelLoading(true);
+    setLiveIntelError("");
+    try {
+      const response = await fetch(
+        `/api/live-intel?gameName=${encodeURIComponent(
+          liveIntelTarget.name
+        )}&tagLine=${encodeURIComponent(
+          liveIntelTarget.tagline
+        )}&region=${region}`
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to load live intel.");
+      }
+      setLiveIntelData(data);
+    } catch (error) {
+      setLiveIntelError(error.message);
+      setLiveIntelData(null);
+    } finally {
+      setLiveIntelLoading(false);
+    }
+  };
+
   const rankedEntries = result?.ranked || [];
   const masteryTop = result?.masteryTop || [];
   const challenges = result?.challenges;
@@ -968,6 +1000,12 @@ export default function HomePage() {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("teamTheme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!liveIntelTarget && roster.length) {
+      setLiveIntelTarget(roster[0]);
+    }
+  }, [liveIntelTarget, roster]);
 
 
   useEffect(() => {
@@ -1354,6 +1392,19 @@ export default function HomePage() {
             const resultEmoji = lastMatch.win ? "🥳" : "🥀";
             const resultLabel = lastMatch.win ? "won" : "lost";
             const queueLabel = lastMatch.queueName || lastMatch.gameMode || "game";
+            const kdaDeaths = Number.isFinite(lastMatch.deaths)
+              ? lastMatch.deaths
+              : 0;
+            const kdaTotal = (lastMatch.kills || 0) + (lastMatch.assists || 0);
+            const kdaRatio = kdaTotal / Math.max(1, kdaDeaths);
+            const ranItDown = !lastMatch.win && kdaRatio < 1;
+            const carriedGame =
+              lastMatch.win && kdaRatio >= 3 && kdaTotal >= 10;
+            const resultMessage = ranItDown
+              ? `${entry.key} JUST RAN DOWN THEIR GAME.`
+              : carriedGame
+                ? `${entry.key} JUST CARRIED THEIR GAME!`
+                : `${entry.key} ${resultLabel} a ${queueLabel} match.`;
             if (
               RANKED_QUEUE_IDS.has(lastMatch.queueId) ||
               (lastMatch.queueName || "").toLowerCase().includes("ranked")
@@ -1361,7 +1412,7 @@ export default function HomePage() {
               nextAnnouncements.push({
                 id: `match:${cacheKey}:${lastMatch.matchId}`,
                 emoji: resultEmoji,
-                message: `${entry.key} ${resultLabel} a ${queueLabel} match.`,
+                message: resultMessage,
                 createdAt: matchEndTime || Date.now(),
                 queueId: lastMatch.queueId || null,
                 queueName: lastMatch.queueName || null
@@ -1513,6 +1564,13 @@ export default function HomePage() {
             onClick={() => setActiveSection("tracker")}
           >
             Player tracker
+          </button>
+          <button
+            type="button"
+            className={activeSection === "intel" ? "nav-item active" : "nav-item"}
+            onClick={() => setActiveSection("intel")}
+          >
+            Live intel
           </button>
           <button
             type="button"
@@ -1983,6 +2041,117 @@ export default function HomePage() {
                   <p className="match-meta">No tournaments yet.</p>
                 )}
               </div>
+            </section>
+          ) : null}
+
+          {activeSection === "intel" ? (
+            <section className="card card-strong fade-in">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Live intel</p>
+                  <h2>Opponent scouting</h2>
+                </div>
+                <span className="pill">Ranked only</span>
+              </div>
+              <div className="form form-inline">
+                <select
+                  value={
+                    liveIntelTarget
+                      ? `${liveIntelTarget.name}#${liveIntelTarget.tagline}`
+                      : ""
+                  }
+                  onChange={(event) => {
+                    const [name, tagline] = event.target.value.split("#");
+                    const next = roster.find(
+                      (entry) => entry.name === name && entry.tagline === tagline
+                    );
+                    setLiveIntelTarget(next || null);
+                  }}
+                >
+                  {roster.map((player) => (
+                    <option
+                      key={`${player.name}#${player.tagline}`}
+                      value={`${player.name}#${player.tagline}`}
+                    >
+                      {player.name}#{player.tagline}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" onClick={loadLiveIntel}>
+                  Load live intel
+                </button>
+              </div>
+              {liveIntelError ? <p className="error">{liveIntelError}</p> : null}
+              {liveIntelLoading ? (
+                <p className="match-meta">Scanning live match...</p>
+              ) : null}
+              {liveIntelData && !liveIntelData.activeGame ? (
+                <p className="match-meta">
+                  No active game found for this player.
+                </p>
+              ) : null}
+              {liveIntelData?.participants?.length ? (
+                <div className="intel-grid">
+                  {[100, 200].map((teamId) => {
+                    const teamPlayers = liveIntelData.participants.filter(
+                      (player) => player.teamId === teamId
+                    );
+                    const isFriendly = liveIntelData.friendlyTeamId === teamId;
+                    return (
+                      <div
+                        key={teamId}
+                        className={`intel-team ${isFriendly ? "friendly" : "enemy"}`}
+                      >
+                        <div className="intel-team-head">
+                          <strong>{isFriendly ? "Your team" : "Opponents"}</strong>
+                          <span className="match-meta">
+                            {teamPlayers.length} players
+                          </span>
+                        </div>
+                        {teamPlayers.map((player) => (
+                          <div key={player.puuid} className="intel-card">
+                            <div className="intel-main">
+                              <div>
+                                <strong>{player.riotId}</strong>
+                                <div className="match-meta">
+                                  {player.championName || "Unknown"} ·{" "}
+                                  {player.mainRole || "Role unknown"}
+                                </div>
+                                {player.stats ? (
+                                  <div className="match-meta">
+                                    Avg K/D/A: {player.stats.avgKills}/
+                                    {player.stats.avgDeaths}/
+                                    {player.stats.avgAssists} · KDA{" "}
+                                    {player.stats.kdaRatio.toFixed(2)}
+                                  </div>
+                                ) : null}
+                              </div>
+                              {player.championImage ? (
+                                <img
+                                  src={`https://ddragon.leagueoflegends.com/cdn/${liveIntelData.ddVersion}/img/champion/${player.championImage}`}
+                                  alt={player.championName || "Champion"}
+                                  className="intel-champ"
+                                />
+                              ) : null}
+                            </div>
+                            {player.traits?.length ? (
+                              <div className="intel-traits">
+                                {player.traits.map((trait) => (
+                                  <span key={trait} className="pill">
+                                    {trait}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="match-meta">No traits yet.</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
             </section>
           ) : null}
 

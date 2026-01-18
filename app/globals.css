@@ -635,6 +635,107 @@ p {
   border: 1px solid var(--stroke);
 }
 
+.intel-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin-top: 18px;
+}
+
+.intel-team {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--stroke);
+  background: rgba(10, 14, 20, 0.72);
+  display: grid;
+  gap: 12px;
+}
+
+.intel-team.friendly {
+  border-color: rgba(0, 209, 255, 0.35);
+  box-shadow: 0 16px 32px rgba(0, 209, 255, 0.08);
+}
+
+.intel-team.enemy {
+  border-color: rgba(255, 111, 60, 0.3);
+}
+
+.intel-team-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.intel-card {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(6, 10, 16, 0.7);
+  display: grid;
+  gap: 8px;
+}
+
+.intel-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.intel-champ {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+}
+
+.intel-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spell-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spell-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 14, 20, 0.7);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.spell-chip.ready {
+  border-color: rgba(95, 211, 163, 0.45);
+  box-shadow: 0 10px 20px rgba(95, 211, 163, 0.12);
+}
+
+.spell-chip.cooldown {
+  border-color: rgba(255, 111, 60, 0.4);
+  background: rgba(20, 12, 10, 0.7);
+}
+
+.spell-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--stroke);
+}
+
+.spell-timer {
+  font-weight: 600;
+  font-size: 12px;
+}
+
 .stat-title {
   font-size: 13px;
   text-transform: uppercase;
@@ -653,6 +754,11 @@ p {
   display: grid;
   gap: 16px;
   margin-top: 24px;
+}
+
+.form-inline {
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: center;
 }
 
 label {
