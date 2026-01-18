@@ -604,6 +604,28 @@ export default function HomePage() {
       setActiveSection("dashboard");
     }
   }, [activeSection]);
+  useEffect(() => {
+    if (!isDesktopApp) {
+      return;
+    }
+    const currentShortcut = window?.electronApp?.getOverlayShortcut;
+    if (!currentShortcut) {
+      return;
+    }
+    currentShortcut()
+      .then((shortcut) => {
+        if (shortcut) {
+          setOverlayShortcutActive(shortcut);
+        }
+      })
+      .catch(() => {});
+  }, [isDesktopApp]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem("mlg.overlayShortcut", overlayShortcutInput);
+  }, [overlayShortcutInput]);
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") {
       return "cosmos";
@@ -611,6 +633,14 @@ export default function HomePage() {
     return window.localStorage.getItem("teamTheme") || "cosmos";
   });
   const [settingsMessage, setSettingsMessage] = useState("");
+  const [overlayShortcutInput, setOverlayShortcutInput] = useState(() => {
+    if (typeof window === "undefined") {
+      return "Ctrl+Shift+O";
+    }
+    return window.localStorage.getItem("mlg.overlayShortcut") || "Ctrl+Shift+O";
+  });
+  const [overlayShortcutActive, setOverlayShortcutActive] = useState("");
+  const [overlayShortcutStatus, setOverlayShortcutStatus] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatMessage, setChatMessage] = useState("");
@@ -655,6 +685,43 @@ export default function HomePage() {
   const [liveIntelData, setLiveIntelData] = useState(null);
   const [liveIntelLoading, setLiveIntelLoading] = useState(false);
   const [liveIntelError, setLiveIntelError] = useState("");
+  const normalizeOverlayShortcut = (value) => {
+    if (!value) {
+      return "";
+    }
+    let normalized = value.trim().replace(/\s+/g, "");
+    normalized = normalized.replace(/Ctrl/gi, "CommandOrControl");
+    normalized = normalized.replace(/Cmd/gi, "CommandOrControl");
+    return normalized;
+  };
+  const formatOverlayShortcut = (value) =>
+    value ? value.replace(/CommandOrControl/gi, "Ctrl") : "";
+  const handleOverlayToggle = async () => {
+    if (!window?.electronApp?.toggleOverlay) {
+      setOverlayShortcutStatus("Open the desktop app to toggle the overlay.");
+      return;
+    }
+    setOverlayShortcutStatus("");
+    await window.electronApp.toggleOverlay();
+  };
+  const handleOverlayShortcutSave = async () => {
+    if (!window?.electronApp?.setOverlayShortcut) {
+      setOverlayShortcutStatus("Open the desktop app to save hotkeys.");
+      return;
+    }
+    const normalized = normalizeOverlayShortcut(overlayShortcutInput);
+    if (!normalized) {
+      setOverlayShortcutStatus("Enter a shortcut like Ctrl+Shift+O.");
+      return;
+    }
+    const result = await window.electronApp.setOverlayShortcut(normalized);
+    if (!result?.ok) {
+      setOverlayShortcutStatus(result?.error || "Shortcut unavailable.");
+      return;
+    }
+    setOverlayShortcutActive(result.shortcut);
+    setOverlayShortcutStatus("Saved.");
+  };
   const getFreshToken = async () => {
     if (authToken) {
       return authToken;
@@ -2267,6 +2334,39 @@ export default function HomePage() {
                       </button>
                     ))}
                   </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-title">Overlay</div>
+                  {!isDesktopApp ? (
+                    <p className="match-meta">
+                      Overlay controls are available in the desktop app.
+                    </p>
+                  ) : (
+                    <div className="form">
+                      <button type="button" onClick={handleOverlayToggle}>
+                        Toggle overlay
+                      </button>
+                      <input
+                        value={overlayShortcutInput}
+                        onChange={(event) =>
+                          setOverlayShortcutInput(event.target.value)
+                        }
+                        placeholder="Ctrl+Shift+O"
+                      />
+                      <button type="button" onClick={handleOverlayShortcutSave}>
+                        Save hotkey
+                      </button>
+                    </div>
+                  )}
+                  <p className="match-meta">
+                    Active hotkey:{" "}
+                    {overlayShortcutActive
+                      ? formatOverlayShortcut(overlayShortcutActive)
+                      : "Not set"}
+                  </p>
+                  {overlayShortcutStatus ? (
+                    <p className="match-meta">{overlayShortcutStatus}</p>
+                  ) : null}
                 </div>
               </div>
             </section>

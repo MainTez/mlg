@@ -5,7 +5,8 @@ const {
   Menu,
   globalShortcut,
   Tray,
-  nativeImage
+  nativeImage,
+  ipcMain
 } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
@@ -56,17 +57,11 @@ const createWindow = () => {
   });
 };
 
-const createTray = () => {
-  if (tray) {
-    return;
-  }
-  const trayIcon = nativeImage.createFromPath(getTrayIconPath());
-  tray = new Tray(trayIcon);
-  tray.setToolTip("MLG");
+const buildTrayMenu = () => {
   const toggleLabel = overlayShortcut
     ? `Toggle Overlay (${overlayShortcut.replace("CommandOrControl", "Ctrl")})`
     : "Toggle Overlay";
-  const contextMenu = Menu.buildFromTemplate([
+  return Menu.buildFromTemplate([
     { label: toggleLabel, click: () => toggleOverlay() },
     {
       label: "Show App",
@@ -82,22 +77,50 @@ const createTray = () => {
     { type: "separator" },
     { label: "Quit", click: () => app.quit() }
   ]);
-  tray.setContextMenu(contextMenu);
+};
+
+const createTray = () => {
+  if (tray) {
+    return;
+  }
+  const trayIcon = nativeImage.createFromPath(getTrayIconPath());
+  tray = new Tray(trayIcon);
+  tray.setToolTip("MLG");
+  tray.setContextMenu(buildTrayMenu());
   tray.on("double-click", () => toggleOverlay());
 };
 
-const registerOverlayShortcut = () => {
-  const candidates = [
-    "CommandOrControl+Shift+O",
-    "CommandOrControl+Alt+O",
-    "Alt+Shift+O"
-  ];
+const registerOverlayShortcut = (preferredShortcut) => {
+  const candidates = preferredShortcut
+    ? [preferredShortcut]
+    : [
+        "CommandOrControl+Shift+O",
+        "CommandOrControl+Alt+O",
+        "Alt+Shift+O"
+      ];
   for (const accelerator of candidates) {
+    if (!accelerator) {
+      continue;
+    }
     if (globalShortcut.register(accelerator, toggleOverlay)) {
       return accelerator;
     }
   }
+  if (preferredShortcut) {
+    return registerOverlayShortcut(null);
+  }
   return null;
+};
+
+const updateOverlayShortcut = (shortcut) => {
+  if (overlayShortcut) {
+    globalShortcut.unregister(overlayShortcut);
+  }
+  overlayShortcut = registerOverlayShortcut(shortcut);
+  if (tray) {
+    tray.setContextMenu(buildTrayMenu());
+  }
+  return overlayShortcut;
 };
 
 const toggleOverlay = () => {
@@ -159,6 +182,18 @@ app.whenReady().then(() => {
   overlayShortcut = registerOverlayShortcut();
   createTray();
   createWindow();
+  ipcMain.handle("overlay:shortcut:get", () => overlayShortcut);
+  ipcMain.handle("overlay:shortcut:set", (_event, shortcut) => {
+    const updated = updateOverlayShortcut(shortcut);
+    if (!updated) {
+      return { ok: false, error: "Shortcut unavailable." };
+    }
+    return { ok: true, shortcut: updated };
+  });
+  ipcMain.handle("overlay:toggle", () => {
+    toggleOverlay();
+    return true;
+  });
 
   if (app.isPackaged) {
     autoUpdater.checkForUpdatesAndNotify();
