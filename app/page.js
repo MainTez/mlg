@@ -593,6 +593,14 @@ export default function HomePage() {
       : "dashboard";
   });
   const [isDesktopApp, setIsDesktopApp] = useState(false);
+  const [overlayShortcutInput, setOverlayShortcutInput] = useState(() => {
+    if (typeof window === "undefined") {
+      return "Ctrl+Shift+O";
+    }
+    return window.localStorage.getItem("mlg.overlayShortcut") || "Ctrl+Shift+O";
+  });
+  const [overlayShortcutActive, setOverlayShortcutActive] = useState("");
+  const [overlayShortcutStatus, setOverlayShortcutStatus] = useState("");
 
   useEffect(() => {
     window.localStorage.setItem("mlg.activeSection", activeSection);
@@ -633,14 +641,6 @@ export default function HomePage() {
     return window.localStorage.getItem("teamTheme") || "cosmos";
   });
   const [settingsMessage, setSettingsMessage] = useState("");
-  const [overlayShortcutInput, setOverlayShortcutInput] = useState(() => {
-    if (typeof window === "undefined") {
-      return "Ctrl+Shift+O";
-    }
-    return window.localStorage.getItem("mlg.overlayShortcut") || "Ctrl+Shift+O";
-  });
-  const [overlayShortcutActive, setOverlayShortcutActive] = useState("");
-  const [overlayShortcutStatus, setOverlayShortcutStatus] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatMessage, setChatMessage] = useState("");
