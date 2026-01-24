@@ -32,6 +32,13 @@ const ALLOWED_EMAILS = new Set([
   "johanziokowski@gmail.com",
   "epicman11235@gmail.com"
 ]);
+const OVERLAY_USER_TARGETS = {
+  "danilebnen@gmail.com": { gameName: "MainTez", tagLine: "MLG", region: "euw1" },
+  "epicman11235@gmail.com": { gameName: "TUNGTUNGKIRK", tagLine: "PHONK", region: "euw1" },
+  "johanziolkowski@gmail.com": { gameName: "Johan jojo", tagLine: "MLG", region: "euw1" },
+  "hadilebnen@gmail.com": { gameName: "Ashmumu", tagLine: "MLG", region: "euw1" },
+  "1nd.brahimi09@gmail.com": { gameName: "Ind", tagLine: "MLG", region: "euw1" }
+};
 
 const SECTION_KEYS = new Set([
   "dashboard",
@@ -696,6 +703,23 @@ export default function HomePage() {
   };
   const formatOverlayShortcut = (value) =>
     value ? value.replace(/CommandOrControl/gi, "Ctrl") : "";
+  const applyOverlayTarget = (user) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!user?.email) {
+      return;
+    }
+    const entry = OVERLAY_USER_TARGETS[user.email.toLowerCase()];
+    if (!entry) {
+      return;
+    }
+    window.localStorage.setItem(
+      "mlg.overlayTarget",
+      `${entry.gameName}#${entry.tagLine}`
+    );
+    window.localStorage.setItem("mlg.overlayRegion", entry.region || "euw1");
+  };
   const handleOverlayToggle = async () => {
     if (!window?.electronApp?.toggleOverlay) {
       setOverlayShortcutStatus("Open the desktop app to toggle the overlay.");
@@ -1034,6 +1058,7 @@ export default function HomePage() {
       setAuthUser(user);
       setAuthToken(data.session?.access_token ?? "");
       setAuthLoading(false);
+      applyOverlayTarget(user);
       if (user?.user_metadata?.display_name) {
         setAuthUsername(user.user_metadata.display_name);
       }
@@ -1050,6 +1075,7 @@ export default function HomePage() {
       }
       setAuthUser(user);
       setAuthToken(session?.access_token ?? "");
+      applyOverlayTarget(user);
       if (user?.user_metadata?.display_name) {
         setAuthUsername(user.user_metadata.display_name);
       }
