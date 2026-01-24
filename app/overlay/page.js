@@ -16,11 +16,9 @@ const REGIONS = [
   { id: "ru", label: "RU" }
 ];
 
-const formatNumber = (value) =>
-  Number.isFinite(value) ? value.toFixed(1) : "0.0";
-
 export default function OverlayPage() {
   const [theme, setTheme] = useState("cosmos");
+  const [overlayShortcut, setOverlayShortcut] = useState("Ctrl + O");
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
   const [region, setRegion] = useState("euw1");
@@ -48,6 +46,8 @@ export default function OverlayPage() {
     }
     const savedTheme = window.localStorage.getItem("teamTheme") || "cosmos";
     setTheme(savedTheme);
+    const savedShortcut = window.localStorage.getItem("mlg.overlayShortcut") || "Ctrl+O";
+    setOverlayShortcut(savedShortcut.replace(/\+/g, " + "));
     const savedTarget = window.localStorage.getItem("mlg.overlayTarget");
     const savedRegion =
       window.localStorage.getItem("mlg.overlayRegion") || "euw1";
@@ -64,6 +64,24 @@ export default function OverlayPage() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    const getShortcut = window?.electronApp?.getOverlayShortcut;
+    if (!getShortcut) {
+      return;
+    }
+    getShortcut()
+      .then((shortcut) => {
+        if (!shortcut) {
+          return;
+        }
+        const formatted = shortcut
+          .replace(/CommandOrControl/gi, "Ctrl")
+          .replace(/\+/g, " + ");
+        setOverlayShortcut(formatted);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -219,15 +237,15 @@ export default function OverlayPage() {
 
   return (
     <main className="overlay-shell" data-theme={theme}>
-      <section className="card card-strong fade-in">
+      <section className="card card-strong fade-in overlay-panel overlay-scan">
         <div className="section-head">
           <div>
             <p className="eyebrow">Overlay</p>
             <h2>Live Intel</h2>
           </div>
-          <span className="pill">Ctrl + Shift + O</span>
+          <span className="pill">{overlayShortcut}</span>
         </div>
-        <div className="form form-inline">
+        <div className="form form-inline overlay-form">
           <input
             placeholder="Game name"
             value={gameName}
@@ -257,59 +275,41 @@ export default function OverlayPage() {
       </section>
 
       {intel?.participants?.length ? (
-        <section className="card card-strong fade-in">
-          <div className="intel-grid">
-            {[100, 200].map((teamId) => {
+        <section className="card card-strong fade-in overlay-panel overlay-enemy-panel">
+          {[100, 200]
+            .filter((teamId) => teamId !== intel.friendlyTeamId)
+            .map((teamId) => {
               const teamPlayers = intel.participants.filter(
                 (player) => player.teamId === teamId
               );
-              const isFriendly = intel.friendlyTeamId === teamId;
               return (
-                <div
-                  key={teamId}
-                  className={`intel-team ${isFriendly ? "friendly" : "enemy"}`}
-                >
-                  <div className="intel-team-head">
-                    <strong>{isFriendly ? "Your team" : "Opponents"}</strong>
-                    <span className="match-meta">
-                      {teamPlayers.length} players
-                    </span>
+                <div key={teamId} className="overlay-enemy-wrap">
+                  <div className="overlay-panel-head">
+                    <span className="overlay-title">Opponents</span>
+                    <span className="pill">{teamPlayers.length}</span>
                   </div>
-                  {teamPlayers.map((player) => (
-                    <div key={player.puuid} className="intel-card">
-                      <div className="intel-main">
-                        <div>
-                          <strong>{player.riotId}</strong>
-                          <div className="match-meta">
-                            {player.championName || "Unknown"} ·{" "}
-                            {player.mainRole || "Role unknown"}
-                          </div>
-                          {player.stats ? (
-                            <div className="match-meta">
-                              Avg K/D/A: {formatNumber(player.stats.avgKills)}/
-                              {formatNumber(player.stats.avgDeaths)}/
-                              {formatNumber(player.stats.avgAssists)} · KDA{" "}
-                              {player.stats.kdaRatio.toFixed(2)}
-                            </div>
-                          ) : null}
+                  <div className="overlay-enemy-list">
+                    {teamPlayers.map((player) => (
+                      <div key={player.puuid} className="overlay-enemy-row">
+                        <div className="overlay-champ">
+                          {player.championImage ? (
+                            <img
+                              src={`https://ddragon.leagueoflegends.com/cdn/${intel.ddVersion}/img/champion/${player.championImage}`}
+                              alt={player.championName || "Champion"}
+                              className="overlay-champ-icon"
+                            />
+                          ) : (
+                            <div className="overlay-champ-fallback">?</div>
+                          )}
                         </div>
-                        {player.championImage ? (
-                          <img
-                            src={`https://ddragon.leagueoflegends.com/cdn/${intel.ddVersion}/img/champion/${player.championImage}`}
-                            alt={player.championName || "Champion"}
-                            className="intel-champ"
-                          />
-                        ) : null}
-                      </div>
-                      {player.spells?.length ? (
-                        <div className="spell-row">
-                          {player.spells.map((spell) => {
+                        <div className="overlay-spells">
+                          {(player.spells || []).map((spell) => {
                             const remaining = getRemaining(player, spell);
                             return (
                               <button
                                 key={`${player.puuid}-${spell.id}`}
                                 type="button"
-                                className={`spell-chip ${remaining ? "cooldown" : "ready"}`}
+                                className={`overlay-spell ${remaining ? "cooldown" : "ready"}`}
                                 onClick={() => startSpellTimer(player, spell)}
                                 title={`${spell.name} · ${spell.cooldown || "?"}s`}
                               >
@@ -317,39 +317,24 @@ export default function OverlayPage() {
                                   <img
                                     src={`https://ddragon.leagueoflegends.com/cdn/${intel.ddVersion}/img/spell/${spell.image}`}
                                     alt={spell.name}
-                                    className="spell-icon"
+                                    className="overlay-spell-icon"
                                   />
                                 ) : null}
-                                <span className="spell-timer">
-                                  {remaining || "Ready"}
-                                </span>
+                                {remaining ? (
+                                  <span className="overlay-spell-timer">
+                                    {remaining}
+                                  </span>
+                                ) : null}
                               </button>
                             );
                           })}
                         </div>
-                      ) : null}
-                      {player.traits?.length ? (
-                        <div className="intel-traits">
-                          {player.traits.map((trait) => (
-                            <span key={trait} className="pill">
-                              {trait}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="match-meta">No traits yet.</div>
-                      )}
-                      {player.roleShare ? (
-                        <div className="match-meta">
-                          Main role share: {(player.roleShare * 100).toFixed(0)}%
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
-          </div>
         </section>
       ) : null}
     </main>

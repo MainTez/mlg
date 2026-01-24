@@ -595,9 +595,9 @@ export default function HomePage() {
   const [isDesktopApp, setIsDesktopApp] = useState(false);
   const [overlayShortcutInput, setOverlayShortcutInput] = useState(() => {
     if (typeof window === "undefined") {
-      return "Ctrl+Shift+O";
+      return "Ctrl+O";
     }
-    return window.localStorage.getItem("mlg.overlayShortcut") || "Ctrl+Shift+O";
+    return window.localStorage.getItem("mlg.overlayShortcut") || "Ctrl+O";
   });
   const [overlayShortcutActive, setOverlayShortcutActive] = useState("");
   const [overlayShortcutStatus, setOverlayShortcutStatus] = useState("");
@@ -711,7 +711,7 @@ export default function HomePage() {
     }
     const normalized = normalizeOverlayShortcut(overlayShortcutInput);
     if (!normalized) {
-      setOverlayShortcutStatus("Enter a shortcut like Ctrl+Shift+O.");
+      setOverlayShortcutStatus("Enter a shortcut like Ctrl+O.");
       return;
     }
     const result = await window.electronApp.setOverlayShortcut(normalized);
@@ -2351,7 +2351,7 @@ export default function HomePage() {
                         onChange={(event) =>
                           setOverlayShortcutInput(event.target.value)
                         }
-                        placeholder="Ctrl+Shift+O"
+                        placeholder="Ctrl+O"
                       />
                       <button type="button" onClick={handleOverlayShortcutSave}>
                         Save hotkey

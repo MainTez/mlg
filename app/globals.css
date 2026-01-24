@@ -642,6 +642,150 @@ p {
   margin-top: 18px;
 }
 
+.overlay-shell {
+  max-width: 320px;
+  width: min(320px, 100%);
+  margin: 0;
+  padding: 20px 14px 28px;
+}
+
+.overlay-panel {
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(10, 14, 20, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 40px rgba(5, 9, 14, 0.55);
+}
+
+.overlay-scan .section-head {
+  margin-bottom: 12px;
+}
+
+.overlay-scan h2 {
+  font-size: 20px;
+}
+
+.overlay-form {
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.overlay-form input,
+.overlay-form select,
+.overlay-form button {
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.overlay-form button {
+  width: 100%;
+}
+
+.overlay-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.overlay-title {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.overlay-enemy-list {
+  display: grid;
+  gap: 8px;
+}
+
+.overlay-enemy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(8, 12, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.overlay-champ {
+  width: 48px;
+  height: 48px;
+}
+
+.overlay-champ-icon,
+.overlay-champ-fallback {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+}
+
+.overlay-champ-icon {
+  object-fit: cover;
+}
+
+.overlay-champ-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.overlay-spells {
+  display: grid;
+  gap: 6px;
+}
+
+.overlay-spell {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(12, 16, 22, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.overlay-spell.ready {
+  border-color: rgba(95, 211, 163, 0.45);
+}
+
+.overlay-spell.cooldown {
+  border-color: rgba(255, 120, 86, 0.5);
+  background: rgba(18, 12, 10, 0.75);
+}
+
+.overlay-spell-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--stroke);
+}
+
+.overlay-spell-timer {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(9, 13, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  white-space: nowrap;
+}
+
 .intel-team {
   padding: 16px;
   border-radius: 16px;

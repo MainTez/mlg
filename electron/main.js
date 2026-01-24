@@ -93,11 +93,7 @@ const createTray = () => {
 const registerOverlayShortcut = (preferredShortcut) => {
   const candidates = preferredShortcut
     ? [preferredShortcut]
-    : [
-        "CommandOrControl+Shift+O",
-        "CommandOrControl+Alt+O",
-        "Alt+Shift+O"
-      ];
+    : ["CommandOrControl+O", "CommandOrControl+Shift+O", "Alt+Shift+O"];
   for (const accelerator of candidates) {
     if (!accelerator) {
       continue;
